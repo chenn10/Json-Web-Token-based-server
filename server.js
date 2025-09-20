@@ -11,7 +11,17 @@ app.use(express.static('public'));
 
 
 const users = {
-    'testuser': 'SecureTest2024!'
+    'testuser': 'User123?'
+};
+
+// 用戶數據存儲（實際應用中應該使用數據庫）
+const userDatabase = {
+    'testuser': {
+        username: 'testuser',
+        email: 'test@example.com',
+        password: 'User123?',
+        createdAt: new Date()
+    }
 };
 
 const loginAttempts = {};
@@ -31,14 +41,15 @@ app.post('/login', (req, res) => {
         return res.status(403).json({ message: 'Account is locked. Try again later.', attempts: userAttempts.attempts });
     }
 
-    if (username === 'testuser' && password === 'SecureTest2024!') {
-     
+    // 檢查用戶是否存在且密碼正確
+    const user = userDatabase[username];
+    if (user && user.password === password) {
+        // 登入成功
         userAttempts.attempts = 0;
 
-      
+        // 生成JWT token
         const token = jwt.sign({ username }, 'your_jwt_secret', { expiresIn: '1h' });
 
-        
         res.status(200).json({ message: 'Login successful', token });
     } else {
         
@@ -99,6 +110,57 @@ app.post('/refresh-token', authenticateToken, (req, res) => {
     res.json({ 
         message: 'Token refreshed successfully', 
         token: newToken 
+    });
+});
+
+// 註冊端點
+app.post('/register', (req, res) => {
+    const { username, email, password } = req.body;
+
+    // 基本驗證
+    if (!username || !email || !password) {
+        return res.status(400).json({ message: '所有欄位都是必填的' });
+    }
+
+    // 檢查用戶名是否已存在
+    if (userDatabase[username]) {
+        return res.status(409).json({ message: '用戶名已存在' });
+    }
+
+    // 檢查郵箱是否已存在
+    const existingUser = Object.values(userDatabase).find(user => user.email === email);
+    if (existingUser) {
+        return res.status(409).json({ message: '電子郵件已被使用' });
+    }
+
+    // 密碼強度驗證
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+        return res.status(400).json({ 
+            message: '密碼必須包含至少8個字符，包括大寫字母、小寫字母、數字和特殊字符' 
+        });
+    }
+
+    // 創建新用戶
+    const newUser = {
+        username,
+        email,
+        password, // 實際應用中應該加密
+        createdAt: new Date()
+    };
+
+    // 保存到數據庫
+    userDatabase[username] = newUser;
+    users[username] = password; // 為了兼容現有的登入邏輯
+
+    // 返回成功響應
+    res.status(201).json({ 
+        message: '註冊成功', 
+        user: {
+            username: newUser.username,
+            email: newUser.email,
+            createdAt: newUser.createdAt
+        }
     });
 });
 
