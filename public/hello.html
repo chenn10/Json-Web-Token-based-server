@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome - JWT Demo</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .welcome-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 40px;
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .welcome-title {
+            color: #00a896;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .welcome-subtitle {
+            color: #666;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+        }
+        
+        .user-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #00a896;
+        }
+        
+        .token-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 0.9em;
+            word-break: break-all;
+        }
+        
+        .action-buttons {
+            margin-top: 30px;
+        }
+        
+        .btn {
+            padding: 12px 30px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: #00a896;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #008a7a;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-online {
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .logout-timer {
+            background: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="welcome-container">
+        <h1 class="welcome-title">🎉 歡迎登入成功！</h1>
+        <p class="welcome-subtitle">您已成功通過JWT認證</p>
+        
+        <div class="user-info">
+            <h3>👤 用戶資訊</h3>
+            <p><strong>用戶名：</strong><span id="username">載入中...</span></p>
+            <p><strong>登入時間：</strong><span id="loginTime">載入中...</span></p>
+            <p><strong>狀態：</strong><span class="status-indicator status-online"></span>在線</p>
+        </div>
+        
+        <div class="token-info">
+            <h4>🔑 JWT Token 資訊</h4>
+            <p><strong>Token：</strong><span id="tokenDisplay">載入中...</span></p>
+            <p><strong>過期時間：</strong><span id="tokenExpiry">載入中...</span></p>
+        </div>
+        
+        <div class="logout-timer" id="logoutTimer" style="display: none;">
+            <strong>⏰ 自動登出倒數：</strong><span id="countdown">--</span>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="btn btn-primary" onclick="refreshToken()">🔄 刷新Token</button>
+            <button class="btn btn-secondary" onclick="showTokenInfo()">ℹ️ 查看Token詳情</button>
+            <button class="btn btn-danger" onclick="logout()">🚪 登出</button>
+        </div>
+    </div>
+
+    <script>
+        let token = localStorage.getItem('token');
+        let logoutTimer;
+        let countdownInterval;
+
+        // 頁面載入時檢查認證
+        window.addEventListener('load', function() {
+            if (!token) {
+                alert('請先登入');
+                window.location.href = '/';
+                return;
+            }
+            
+            // 驗證token並載入用戶資訊
+            verifyAndLoadUserInfo();
+            
+            // 設置自動登出檢查
+            setupAutoLogout();
+        });
+
+        // 驗證token並載入用戶資訊
+        async function verifyAndLoadUserInfo() {
+            try {
+                const response = await fetch('/verify-token', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Token驗證失敗');
+                }
+
+                const userData = await response.json();
+                displayUserInfo(userData);
+            } catch (error) {
+                console.error('Token verification failed:', error);
+                alert('Token已過期，請重新登入');
+                logout();
+            }
+        }
+
+        // 顯示用戶資訊
+        function displayUserInfo(userData) {
+            document.getElementById('username').textContent = userData.username || '未知用戶';
+            document.getElementById('loginTime').textContent = new Date().toLocaleString('zh-TW');
+            
+            // 顯示token（截取前後部分）
+            const tokenDisplay = token.substring(0, 20) + '...' + token.substring(token.length - 20);
+            document.getElementById('tokenDisplay').textContent = tokenDisplay;
+            
+            // 解析token過期時間
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                const expiryTime = new Date(payload.exp * 1000);
+                document.getElementById('tokenExpiry').textContent = expiryTime.toLocaleString('zh-TW');
+                
+                // 設置自動登出
+                const timeUntilExpiry = expiryTime.getTime() - Date.now();
+                if (timeUntilExpiry > 0) {
+                    startCountdown(timeUntilExpiry);
+                }
+            } catch (error) {
+                document.getElementById('tokenExpiry').textContent = '無法解析';
+            }
+        }
+
+        // 設置自動登出
+        function setupAutoLogout() {
+            // 每分鐘檢查一次token狀態
+            setInterval(async () => {
+                try {
+                    const response = await fetch('/verify-token', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (!response.ok) {
+                        logout();
+                    }
+                } catch (error) {
+                    logout();
+                }
+            }, 60000); // 每分鐘檢查一次
+        }
+
+        // 開始倒數計時
+        function startCountdown(timeUntilExpiry) {
+            const timerElement = document.getElementById('logoutTimer');
+            const countdownElement = document.getElementById('countdown');
+            
+            timerElement.style.display = 'block';
+            
+            countdownInterval = setInterval(() => {
+                timeUntilExpiry -= 1000;
+                
+                if (timeUntilExpiry <= 0) {
+                    clearInterval(countdownInterval);
+                    logout();
+                    return;
+                }
+                
+                const minutes = Math.floor(timeUntilExpiry / 60000);
+                const seconds = Math.floor((timeUntilExpiry % 60000) / 1000);
+                countdownElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        // 刷新Token
+        async function refreshToken() {
+            try {
+                const response = await fetch('/refresh-token', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    token = data.token;
+                    localStorage.setItem('token', token);
+                    
+                    // 重新載入用戶資訊
+                    verifyAndLoadUserInfo();
+                    
+                    alert('Token已刷新！');
+                } else {
+                    alert('Token刷新失敗，請重新登入');
+                    logout();
+                }
+            } catch (error) {
+                console.error('Token refresh failed:', error);
+                alert('Token刷新失敗，請重新登入');
+                logout();
+            }
+        }
+
+        // 顯示Token詳情
+        function showTokenInfo() {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                const header = JSON.parse(atob(token.split('.')[0]));
+                
+                const tokenInfo = `
+JWT Token 詳情：
+
+Header:
+${JSON.stringify(header, null, 2)}
+
+Payload:
+${JSON.stringify(payload, null, 2)}
+
+完整Token:
+${token}
+                `;
+                
+                alert(tokenInfo);
+            } catch (error) {
+                alert('無法解析Token資訊');
+            }
+        }
+
+        // 登出
+        function logout() {
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+            
+            localStorage.removeItem('token');
+            alert('已登出');
+            window.location.href = '/';
+        }
+
+        // 頁面關閉前清理
+        window.addEventListener('beforeunload', function() {
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+        });
+    </script>
+</body>
+</html>

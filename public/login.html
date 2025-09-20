@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JWT 認證系統 | 安全登入</title>
+    <link rel="stylesheet" href="style.css?v=2">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 背景裝飾 -->
+    <div class="bg-decoration">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <div class="container">
+        <div class="login-card">
+            <!-- 標題區域 -->
+            <div class="header">
+                <div class="logo">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h1 class="title">歡迎回來</h1>
+                <p class="subtitle">請登入您的帳戶以繼續</p>
+            </div>
+
+            <!-- 登入表單 -->
+            <form id="loginForm" class="login-form">
+                <div class="input-group">
+                    <div class="input-wrapper">
+                        <i class="fas fa-user input-icon"></i>
+                        <input type="text" id="username" placeholder="用戶名" required>
+                        <div class="input-border"></div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" id="password" placeholder="密碼" required>
+                        <div class="input-border"></div>
+                    </div>
+                </div>
+
+                <div class="form-options">
+                    <label class="remember-me">
+                        <input type="checkbox" id="rememberMe">
+                        <span class="checkmark"></span>
+                        記住我
+                    </label>
+                    <a href="#" class="forgot-password">忘記密碼？</a>
+                </div>
+
+                <button type="submit" class="login-btn" id="loginButton">
+                    <span class="btn-text">登入</span>
+                    <div class="btn-loader">
+                        <div class="spinner"></div>
+                </div>
+                </button>
+
+                <div class="divider">
+                    <span>或</span>
+                </div>
+
+                <div class="social-login">
+                    <button type="button" class="social-btn google-btn">
+                        <i class="fab fa-google"></i>
+                        <span>使用 Google 登入</span>
+                    </button>
+                    <button type="button" class="social-btn github-btn">
+                        <i class="fab fa-github"></i>
+                        <span>使用 GitHub 登入</span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- 底部連結 -->
+            <div class="footer">
+                <p>還沒有帳戶？ <a href="register.html" class="signup-link">立即註冊</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 社交登入彈窗 -->
+    <div id="socialLoginModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Google 登入</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="socialLoginForm">
+                    <div class="input-group">
+                        <div class="input-wrapper">
+                            <i class="fas fa-envelope input-icon"></i>
+                            <input type="email" id="socialEmail" placeholder="電子郵件" required>
+                            <div class="input-border"></div>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <div class="input-wrapper">
+                            <i class="fas fa-lock input-icon"></i>
+                            <input type="password" id="socialPassword" placeholder="密碼" required>
+                            <div class="input-border"></div>
+                        </div>
+                    </div>
+                    <button type="submit" class="login-btn" id="socialLoginButton">
+                        <span class="btn-text">登入</span>
+                        <div class="btn-loader">
+                            <div class="spinner"></div>
+                        </div>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 檢查是否已經登入
+        window.addEventListener('load', function() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                // 驗證token是否有效
+                verifyToken(token);
+            }
+        });
+
+        // 驗證token函數
+        async function verifyToken(token) {
+            try {
+                const response = await fetch('/verify-token', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    // Token有效，直接跳轉
+                    window.location.href = 'hello.html';
+                } else {
+                    // Token無效，清除並重新登入
+                    localStorage.removeItem('token');
+                }
+            } catch (error) {
+                console.error('Token verification failed:', error);
+                localStorage.removeItem('token');
+            }
+        }
+
+        // 登入表單處理
+        document.getElementById('loginForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const loginButton = document.getElementById('loginButton');
+            const errorMessage = document.getElementById('errorMessage');
+
+            // 清除之前的錯誤訊息
+            if (errorMessage) {
+                errorMessage.remove();
+            }
+
+            // 顯示loading狀態
+            const originalText = loginButton.value;
+            loginButton.value = '登入中...';
+            loginButton.disabled = true;
+
+            let response, data;
+            let isLocked = false;
+
+            try {
+                response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                data = await response.json();
+
+                if (response.status === 200) {
+                    localStorage.setItem('token', data.token);
+                    showSuccessMessage('登入成功！正在跳轉...');
+                    
+                    // 延遲跳轉以顯示成功訊息
+                    setTimeout(() => {
+                    window.location.href = 'hello.html';
+                    }, 1000);
+                } else {
+                    if (data.attempts >= 3) {
+                        showErrorMessage('帳號已被鎖定，請10分鐘後再試', 'error');
+                        isLocked = true;
+                        
+                        // 10分鐘後重新啟用按鈕
+                        setTimeout(() => {
+                            loginButton.disabled = false;
+                            loginButton.querySelector('.btn-text').textContent = originalText;
+                            loginButton.classList.remove('loading');
+                        }, 10 * 60 * 1000);
+                    } else {
+                        showErrorMessage(`密碼錯誤，您還有 ${3 - data.attempts} 次嘗試機會`, 'warning');
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showErrorMessage('登入時發生錯誤，請稍後再試', 'error');
+            } finally {
+                // 只有在沒有被鎖定且不是成功登入時才恢復按鈕
+                if (!isLocked && response && response.status !== 200) {
+                    loginButton.querySelector('.btn-text').textContent = originalText;
+                    loginButton.classList.remove('loading');
+                    loginButton.disabled = false;
+                }
+            }
+        });
+
+        // 顯示成功訊息
+        function showSuccessMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.id = 'successMessage';
+            messageDiv.className = 'message success';
+            messageDiv.textContent = message;
+            document.querySelector('.login-form').appendChild(messageDiv);
+        }
+
+        // 顯示錯誤訊息
+        function showErrorMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.id = 'errorMessage';
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = message;
+            document.querySelector('.login-form').appendChild(messageDiv);
+        }
+
+        // 社交登入功能
+        let currentProvider = '';
+
+        // Google 登入
+        document.querySelector('.google-btn').addEventListener('click', function() {
+            currentProvider = 'google';
+            document.getElementById('modalTitle').textContent = 'Google 登入';
+            document.getElementById('socialLoginModal').style.display = 'block';
+        });
+
+        // GitHub 登入
+        document.querySelector('.github-btn').addEventListener('click', function() {
+            currentProvider = 'github';
+            document.getElementById('modalTitle').textContent = 'GitHub 登入';
+            document.getElementById('socialLoginModal').style.display = 'block';
+        });
+
+        // 關閉彈窗
+        function closeModal() {
+            document.getElementById('socialLoginModal').style.display = 'none';
+            document.getElementById('socialLoginForm').reset();
+        }
+
+        // 點擊彈窗外部關閉
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('socialLoginModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+
+        // 社交登入表單處理
+        document.getElementById('socialLoginForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const email = document.getElementById('socialEmail').value;
+            const password = document.getElementById('socialPassword').value;
+            const socialLoginButton = document.getElementById('socialLoginButton');
+
+            // 顯示loading狀態
+            const originalText = socialLoginButton.querySelector('.btn-text').textContent;
+            socialLoginButton.querySelector('.btn-text').textContent = '登入中...';
+            socialLoginButton.classList.add('loading');
+            socialLoginButton.disabled = true;
+
+            try {
+                const response = await fetch('/social-login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        provider: currentProvider, 
+                        email, 
+                        password 
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.status === 200) {
+                    localStorage.setItem('token', data.token);
+                    showSuccessMessage(`${currentProvider === 'google' ? 'Google' : 'GitHub'} 登入成功！正在跳轉...`);
+                    
+                    // 延遲跳轉
+                    setTimeout(() => {
+                        window.location.href = 'hello.html';
+                    }, 1000);
+                } else {
+                    alert(data.message || '登入失敗，請檢查您的帳戶信息');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('登入時發生錯誤，請稍後再試');
+            } finally {
+                // 恢復按鈕狀態
+                socialLoginButton.querySelector('.btn-text').textContent = originalText;
+                socialLoginButton.classList.remove('loading');
+                socialLoginButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

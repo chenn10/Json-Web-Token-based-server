@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JWT 認證系統 | 用戶註冊</title>
+    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 背景裝飾 -->
+    <div class="bg-decoration">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <div class="container">
+        <div class="login-card">
+            <!-- 標題區域 -->
+            <div class="header">
+                <div class="logo">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <h1 class="title">創建帳戶</h1>
+                <p class="subtitle">請填寫以下信息來註冊新帳戶</p>
+            </div>
+
+            <!-- 註冊表單 -->
+            <form id="registerForm" class="login-form">
+                <div class="input-group">
+                    <div class="input-wrapper">
+                        <i class="fas fa-user input-icon"></i>
+                        <input type="text" id="username" placeholder="用戶名" required>
+                        <div class="input-border"></div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <div class="input-wrapper">
+                        <i class="fas fa-envelope input-icon"></i>
+                        <input type="email" id="email" placeholder="電子郵件" required>
+                        <div class="input-border"></div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" id="password" placeholder="密碼" required>
+                        <div class="input-border"></div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" id="confirmPassword" placeholder="確認密碼" required>
+                        <div class="input-border"></div>
+                    </div>
+                </div>
+
+                <!-- 密碼強度指示器 -->
+                <div class="password-strength">
+                    <div class="strength-bar">
+                        <div class="strength-fill" id="strengthFill"></div>
+                    </div>
+                    <div class="strength-text" id="strengthText">密碼強度</div>
+                </div>
+
+                <!-- 密碼要求 -->
+                <div class="password-requirements">
+                    <div class="requirement" id="req-length">
+                        <i class="fas fa-times"></i>
+                        <span>至少8個字符</span>
+                    </div>
+                    <div class="requirement" id="req-uppercase">
+                        <i class="fas fa-times"></i>
+                        <span>包含大寫字母</span>
+                    </div>
+                    <div class="requirement" id="req-lowercase">
+                        <i class="fas fa-times"></i>
+                        <span>包含小寫字母</span>
+                    </div>
+                    <div class="requirement" id="req-number">
+                        <i class="fas fa-times"></i>
+                        <span>包含數字</span>
+                    </div>
+                    <div class="requirement" id="req-special">
+                        <i class="fas fa-times"></i>
+                        <span>包含特殊字符</span>
+                    </div>
+                </div>
+
+                <div class="form-options">
+                    <label class="remember-me">
+                        <input type="checkbox" id="agreeTerms" required>
+                        <span class="checkmark"></span>
+                        我同意 <a href="#" class="terms-link">服務條款</a> 和 <a href="#" class="terms-link">隱私政策</a>
+                    </label>
+                </div>
+
+                <button type="submit" class="login-btn" id="registerButton">
+                    <span class="btn-text">創建帳戶</span>
+                    <div class="btn-loader">
+                        <div class="spinner"></div>
+                    </div>
+                </button>
+
+                <div class="divider">
+                    <span>或</span>
+                </div>
+
+                <div class="social-login">
+                    <button type="button" class="social-btn google-btn" onclick="openSocialModal('google')">
+                        <i class="fab fa-google"></i>
+                        <span>使用 Google 註冊</span>
+                    </button>
+                    <button type="button" class="social-btn github-btn" onclick="openSocialModal('github')">
+                        <i class="fab fa-github"></i>
+                        <span>使用 GitHub 註冊</span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- 底部連結 -->
+            <div class="footer">
+                <p>已經有帳戶？ <a href="login.html" class="signup-link">立即登入</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 密碼強度檢查
+        function checkPasswordStrength(password) {
+            let score = 0;
+            const requirements = {
+                length: password.length >= 8,
+                uppercase: /[A-Z]/.test(password),
+                lowercase: /[a-z]/.test(password),
+                number: /\d/.test(password),
+                special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+            };
+
+            // 更新要求指示器
+            Object.keys(requirements).forEach(req => {
+                const element = document.getElementById(`req-${req}`);
+                const icon = element.querySelector('i');
+                if (requirements[req]) {
+                    icon.className = 'fas fa-check';
+                    element.classList.add('met');
+                    score++;
+                } else {
+                    icon.className = 'fas fa-times';
+                    element.classList.remove('met');
+                }
+            });
+
+            // 更新強度條
+            const strengthFill = document.getElementById('strengthFill');
+            const strengthText = document.getElementById('strengthText');
+            const percentage = (score / 5) * 100;
+
+            strengthFill.style.width = percentage + '%';
+
+            if (score <= 2) {
+                strengthFill.className = 'strength-fill weak';
+                strengthText.textContent = '密碼強度：弱';
+            } else if (score <= 3) {
+                strengthFill.className = 'strength-fill medium';
+                strengthText.textContent = '密碼強度：中等';
+            } else {
+                strengthFill.className = 'strength-fill strong';
+                strengthText.textContent = '密碼強度：強';
+            }
+
+            return score >= 3; // 至少滿足3個要求
+        }
+
+        // 密碼輸入監聽
+        document.getElementById('password').addEventListener('input', function() {
+            const password = this.value;
+            checkPasswordStrength(password);
+        });
+
+        // 確認密碼檢查
+        document.getElementById('confirmPassword').addEventListener('input', function() {
+            const password = document.getElementById('password').value;
+            const confirmPassword = this.value;
+            
+            if (confirmPassword && password !== confirmPassword) {
+                this.setCustomValidity('密碼不匹配');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+
+        // 註冊表單處理
+        document.getElementById('registerForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const agreeTerms = document.getElementById('agreeTerms').checked;
+            const registerButton = document.getElementById('registerButton');
+            const errorMessage = document.getElementById('errorMessage');
+
+            // 清除之前的錯誤訊息
+            if (errorMessage) {
+                errorMessage.remove();
+            }
+
+            // 基本驗證
+            if (!agreeTerms) {
+                showErrorMessage('請同意服務條款和隱私政策', 'error');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showErrorMessage('密碼不匹配', 'error');
+                return;
+            }
+
+            if (!checkPasswordStrength(password)) {
+                showErrorMessage('密碼強度不足，請滿足所有要求', 'error');
+                return;
+            }
+
+            // 顯示loading狀態
+            const originalText = registerButton.querySelector('.btn-text').textContent;
+            registerButton.querySelector('.btn-text').textContent = '創建中...';
+            registerButton.classList.add('loading');
+            registerButton.disabled = true;
+
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.status === 201) {
+                    showSuccessMessage('註冊成功！正在跳轉到登入頁面...');
+                    
+                    // 延遲跳轉
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                } else {
+                    showErrorMessage(data.message || '註冊失敗，請稍後再試', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showErrorMessage('註冊時發生錯誤，請稍後再試', 'error');
+            } finally {
+                // 恢復按鈕狀態
+                registerButton.querySelector('.btn-text').textContent = originalText;
+                registerButton.classList.remove('loading');
+                registerButton.disabled = false;
+            }
+        });
+
+        // 顯示成功訊息
+        function showSuccessMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.id = 'successMessage';
+            messageDiv.className = 'message success';
+            messageDiv.textContent = message;
+            document.querySelector('.login-form').appendChild(messageDiv);
+        }
+
+        // 顯示錯誤訊息
+        function showErrorMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.id = 'errorMessage';
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = message;
+            document.querySelector('.login-form').appendChild(messageDiv);
+        }
+    </script>
+</body>
+</html>
