@@ -6,3 +6,7 @@
 執行時請於終端機輸入:node server.js
 
 若想終止伺服器請按下:Ctrl+C
+
+成功成果展示頁面:https://youtu.be/nxRCueX4dJc
+
+失敗成果展示頁面:https://youtu.be/PK0d8TIDcD4
